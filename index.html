@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jadwal Shift Pegawai 2026</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #f5f7fa;
+            color: #333;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+        }
+
+        header {
+            background: linear-gradient(135deg, #2c3e50, #4a6491);
+            color: white;
+            padding: 25px 30px;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 2.4rem;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .controls {
+            padding: 20px 30px;
+            background-color: #f8f9fa;
+            border-bottom: 1px solid #eaeaea;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .month-navigator {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .month-btn {
+            background-color: #2c3e50;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            width: 40px;
+            height: 40px;
+            cursor: pointer;
+            font-size: 1.2rem;
+            transition: background-color 0.2s;
+        }
+
+        .month-btn:hover {
+            background-color: #4a6491;
+        }
+
+        #month-year {
+            font-size: 1.4rem;
+            font-weight: 600;
+            min-width: 180px;
+            text-align: center;
+        }
+
+        .shift-legend {
+            display: flex;
+            gap: 15px;
+            margin-left: auto;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.9rem;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+        }
+
+        .main-content {
+            display: flex;
+            min-height: 600px;
+        }
+
+        .employee-list {
+            width: 200px;
+            background-color: #f8f9fa;
+            border-right: 1px solid #eaeaea;
+            padding: 20px 0;
+        }
+
+        .employee-item {
+            padding: 15px 20px;
+            border-bottom: 1px solid #eaeaea;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .employee-item.active {
+            background-color: #e3f2fd;
+            border-right: 4px solid #2196f3;
+        }
+
+        .employee-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .schedule-container {
+            flex: 1;
+            overflow-x: auto;
+            padding: 20px;
+        }
+
+        .schedule-table {
+            border-collapse: collapse;
+            width: 100%;
+            min-width: 1200px;
+        }
+
+        .schedule-table th {
+            background-color: #2c3e50;
+            color: white;
+            padding: 15px 8px;
+            text-align: center;
+            font-weight: 600;
+            border: 1px solid #34495e;
+            min-width: 40px;
+        }
+
+        .schedule-table td {
+            padding: 12px 8px;
+            text-align: center;
+            border: 1px solid #e0e0e0;
+            transition: all 0.2s;
+            height: 60px;
+        }
+
+        .schedule-table td:hover {
+            background-color: #f9f9f9;
+            transform: scale(1.05);
+        }
+
+        .day-header {
+            background-color: #34495e !important;
+            font-size: 0.9rem;
+        }
+
+        .day-number {
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        .day-name {
+            font-size: 0.85rem;
+            opacity: 0.8;
+        }
+
+        .shift-1 { background-color: #e8f5e9; color: #2e7d32; font-weight: bold; }
+        .shift-2 { background-color: #e3f2fd; color: #1565c0; font-weight: bold; }
+        .shift-3 { background-color: #fff3e0; color: #ef6c00; font-weight: bold; }
+        .shift-x { background-color: #f5f5f5; color: #757575; font-weight: bold; }
+
+        .selected {
+            box-shadow: 0 0 0 3px #ff9800;
+            z-index: 10;
+            position: relative;
+        }
+
+        .action-panel {
+            padding: 20px 30px;
+            background-color: #f8f9fa;
+            border-top: 1px solid #eaeaea;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background-color: #2196f3;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #0b7dda;
+        }
+
+        .btn-success {
+            background-color: #4caf50;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background-color: #3d8b40;
+        }
+
+        .btn-warning {
+            background-color: #ff9800;
+            color: white;
+        }
+
+        .btn-warning:hover {
+            background-color: #e68900;
+        }
+
+        .btn-secondary {
+            background-color: #757575;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background-color: #616161;
+        }
+
+        .shift-info {
+            margin-left: auto;
+            padding: 12px 20px;
+            background-color: white;
+            border-radius: 6px;
+            border-left: 4px solid #2196f3;
+            font-size: 0.95rem;
+        }
+
+        .selection-info {
+            font-weight: 600;
+            color: #2196f3;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+            font-size: 0.9rem;
+            border-top: 1px solid #eee;
+            background-color: #f8f9fa;
+        }
+
+        @media (max-width: 1200px) {
+            .main-content {
+                flex-direction: column;
+            }
+            
+            .employee-list {
+                width: 100%;
+                display: flex;
+                overflow-x: auto;
+                padding: 10px 0;
+            }
+            
+            .employee-item {
+                flex: 0 0 auto;
+                border-bottom: none;
+                border-right: 1px solid #eaeaea;
+            }
+            
+            .schedule-container {
+                padding: 10px;
+            }
+            
+            .controls, .action-panel {
+                padding: 15px;
+            }
+        }
+        
+        /* Modal styles */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .modal-content {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+        }
+        
+        .modal-title {
+            margin-bottom: 20px;
+            color: #2c3e50;
+        }
+        
+        .modal-text {
+            margin-bottom: 20px;
+        }
+        
+        .shift-options {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 25px;
+        }
+        
+        .shift-option {
+            flex: 1;
+            padding: 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            border: 2px solid;
+            transition: all 0.2s;
+        }
+        
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+        
+        .modal-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        
+        .modal-btn-secondary {
+            background-color: #f5f5f5;
+        }
+        
+        .modal-btn-primary {
+            background-color: #2196f3;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-calendar-alt"></i> Jadwal Shift Pegawai 2026</h1>
+            <p class="subtitle">Kelola jadwal shift dengan pola "1 2 3 x x" untuk 5 pegawai. Gunakan fitur update dan tukar shift untuk penyesuaian jadwal.</p>
+        </header>
+        
+        <div class="controls">
+            <div class="month-navigator">
+                <button class="month-btn" id="prev-month"><i class="fas fa-chevron-left"></i></button>
+                <div id="month-year">Februari 2026</div>
+                <button class="month-btn" id="next-month"><i class="fas fa-chevron-right"></i></button>
+            </div>
+            
+            <div class="shift-legend">
+                <div class="legend-item">
+                    <div class="legend-color shift-1"></div>
+                    <span>Shift 1</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color shift-2"></div>
+                    <span>Shift 2</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color shift-3"></div>
+                    <span>Shift 3</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color shift-x"></div>
+                    <span>Hari Libur (x)</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="main-content">
+            <div class="employee-list" id="employee-list">
+                <!-- Employee list will be generated by JavaScript -->
+            </div>
+            
+            <div class="schedule-container">
+                <table class="schedule-table" id="schedule-table">
+                    <!-- Schedule will be generated by JavaScript -->
+                </table>
+            </div>
+        </div>
+        
+        <div class="action-panel">
+            <button class="btn btn-primary" id="update-shift">
+                <i class="fas fa-edit"></i> Update Shift Terpilih
+            </button>
+            
+            <button class="btn btn-success" id="swap-shift">
+                <i class="fas fa-exchange-alt"></i> Tukar Shift
+            </button>
+            
+            <button class="btn btn-warning" id="reset-selection">
+                <i class="fas fa-undo"></i> Reset Pilihan
+            </button>
+            
+            <button class="btn btn-secondary" id="generate-year">
+                <i class="fas fa-calendar"></i> Generate Ulang Jadwal
+            </button>
+            
+            <div class="shift-info">
+                <div>Pola Shift: <strong>1 2 3 x x</strong></div>
+                <div class="selection-info" id="selection-info">Tidak ada shift terpilih</div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>Tool Jadwal Shift 2026 &copy; Digunakan untuk mengelola jadwal 5 pegawai: Yosafat, Ardhi, Iqbal, Dimas, Windi</p>
+            <p>Klik pada shift untuk memilih, lalu gunakan tombol aksi untuk mengupdate atau menukar shift</p>
+        </div>
+    </div>
+
+    <!-- Modal for updating shift -->
+    <div id="update-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h2 class="modal-title">Update Shift</h2>
+            <p id="modal-text" class="modal-text"></p>
+            <div class="shift-options">
+                <button class="shift-option" data-shift="1" style="background-color:#e8f5e9; border-color:#2e7d32; color:#2e7d32;">Shift 1</button>
+                <button class="shift-option" data-shift="2" style="background-color:#e3f2fd; border-color:#1565c0; color:#1565c0;">Shift 2</button>
+                <button class="shift-option" data-shift="3" style="background-color:#fff3e0; border-color:#ef6c00; color:#ef6c00;">Shift 3</button>
+                <button class="shift-option" data-shift="x" style="background-color:#f5f5f5; border-color:#757575; color:#757575;">Libur (x)</button>
+            </div>
+            <div class="modal-actions">
+                <button id="cancel-update" class="modal-btn modal-btn-secondary">Batal</button>
+                <button id="confirm-update" class="modal-btn modal-btn-primary">Update Shift</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Data pegawai dan jadwal
+        const employees = [
+            { id: 0, name: "Yosafat", color: "#4CAF50" },
+            { id: 1, name: "Ardhi", color: "#2196F3" },
+            { id: 2, name: "Iqbal", color: "#FF9800" },
+            { id: 3, name: "Dimas", color: "#9C27B0" },
+            { id: 4, name: "Windi", color: "#F44336" }
+        ];
+
+        const monthNames = [
+            "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+            "Juli", "Agustus", "September", "Oktober", "November", "Desember"
+        ];
+
+        // Pola shift: 1, 2, 3, x, x
+        const shiftPattern = ["1", "2", "3", "x", "x"];
+        
+        // Data jadwal untuk setiap bulan (Februari hingga Desember 2026)
+        let scheduleData = {};
+        let currentMonth = 1; // Februari (0-indexed, 1 = Februari)
+        let currentYear = 2026;
+        
+        // Seleksi shift
+        let selectedShift = null;
+        let firstSwapShift = null;
+        
+        // Fungsi untuk menghitung shift berdasarkan pola berulang
+        function calculateShift(employeeIndex, dayOfYear) {
+            // Pola awal untuk setiap pegawai pada 1 Februari 2026 (hari ke-32 dalam tahun)
+            // Berdasarkan data yang diberikan:
+            // Yosafat: x, x, 1, 2, 3, x, x, 1, 2, 3, ...
+            // Ardhi: x, 1, 2, 3, x, x, 1, 2, 3, x, ...
+            // Iqbal: 1, 2, 3, x, x, 1, 2, 3, x, x, ...
+            // Dimas: 2, 3, x, x, 1, 2, 3, x, x, 1, ...
+            // Windi: 3, x, x, 1, 2, 3, x, x, 1, 2, ...
+            
+            // Hitung offset hari dari 1 Februari 2026 (hari ke-32)
+            const feb1DayOfYear = 32; // 1 Februari adalah hari ke-32 dalam tahun 2026
+            const dayOffset = dayOfYear - feb1DayOfYear;
+            
+            // Tentukan pola dasar untuk setiap pegawai
+            const basePatterns = [
+                ["x", "x", "1", "2", "3"], // Yosafat
+                ["x", "1", "2", "3", "x"], // Ardhi
+                ["1", "2", "3", "x", "x"], // Iqbal
+                ["2", "3", "x", "x", "1"], // Dimas
+                ["3", "x", "x", "1", "2"]  // Windi
+            ];
+            
+            const basePattern = basePatterns[employeeIndex];
+            
+            // Hitung shift berdasarkan pola yang berulang setiap 5 hari
+            // Gunakan modulo untuk mendapatkan pola yang berulang
+            const patternIndex = (dayOffset % 5 + 5) % 5; // Untuk menangani nilai negatif
+            return basePattern[patternIndex];
+        }
+        
+        // Inisialisasi jadwal untuk Februari hingga Desember 2026
+        function initializeYearSchedule() {
+            // Hanya generate untuk bulan Februari (1) hingga Desember (11)
+            for (let month = 1; month <= 11; month++) {
+                generateMonthSchedule(month, 2026);
+            }
+        }
+        
+        // Generate jadwal untuk satu bulan
+        function generateMonthSchedule(month, year) {
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            
+            // Inisialisasi data bulan
+            if (!scheduleData[month]) {
+                scheduleData[month] = {};
+            }
+            
+            // Generate jadwal untuk setiap pegawai
+            for (let empIndex = 0; empIndex < employees.length; empIndex++) {
+                const employeeSchedule = [];
+                
+                // Untuk setiap hari dalam bulan
+                for (let day = 1; day <= daysInMonth; day++) {
+                    // Hitung hari dalam tahun
+                    const date = new Date(year, month, day);
+                    const startOfYear = new Date(year, 0, 1);
+                    const dayOfYear = Math.floor((date - startOfYear) / (1000 * 60 * 60 * 24)) + 1;
+                    
+                    // Hitung shift untuk hari ini
+                    const shift = calculateShift(empIndex, dayOfYear);
+                    employeeSchedule.push(shift);
+                }
+                
+                scheduleData[month][empIndex] = employeeSchedule;
+            }
+        }
+        
+        // Render daftar pegawai
+        function renderEmployeeList() {
+            const employeeListEl = document.getElementById('employee-list');
+            employeeListEl.innerHTML = '';
+            
+            employees.forEach(employee => {
+                const employeeEl = document.createElement('div');
+                employeeEl.className = 'employee-item';
+                employeeEl.dataset.employeeId = employee.id;
+                
+                employeeEl.innerHTML = `
+                    <div class="employee-color" style="background-color:${employee.color}"></div>
+                    <span>${employee.name}</span>
+                `;
+                
+                employeeEl.addEventListener('click', () => {
+                    // Tampilkan jadwal pegawai yang dipilih
+                    document.querySelectorAll('.employee-item').forEach(item => {
+                        item.classList.remove('active');
+                    });
+                    employeeEl.classList.add('active');
+                });
+                
+                employeeListEl.appendChild(employeeEl);
+            });
+        }
+        
+        // Render jadwal untuk bulan saat ini
+        function renderSchedule() {
+            const scheduleTableEl = document.getElementById('schedule-table');
+            const monthYearEl = document.getElementById('month-year');
+            
+            // Update judul bulan
+            monthYearEl.textContent = `${monthNames[currentMonth]} ${currentYear}`;
+            
+            // Ambil data untuk bulan ini
+            const monthSchedule = scheduleData[currentMonth];
+            if (!monthSchedule) {
+                generateMonthSchedule(currentMonth, currentYear);
+            }
+            
+            const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+            
+            // Buat header tabel
+            let tableHTML = '<thead><tr>';
+            
+            // Kolom nama pegawai
+            tableHTML += '<th style="width:120px;">Pegawai / Tanggal</th>';
+            
+            // Header tanggal dan hari
+            for (let day = 1; day <= daysInMonth; day++) {
+                const date = new Date(currentYear, currentMonth, day);
+                const dayName = date.toLocaleDateString('id-ID', { weekday: 'short' });
+                
+                tableHTML += `
+                    <th class="day-header">
+                        <div class="day-number">${day}</div>
+                        <div class="day-name">${dayName}</div>
+                    </th>
+                `;
+            }
+            
+            tableHTML += '</tr></thead><tbody>';
+            
+            // Baris untuk setiap pegawai
+            employees.forEach((employee, empIndex) => {
+                tableHTML += `<tr>`;
+                tableHTML += `<td style="font-weight:bold; text-align:left; padding-left:15px;">${employee.name}</td>`;
+                
+                // Data shift untuk setiap hari
+                for (let day = 1; day <= daysInMonth; day++) {
+                    const shift = monthSchedule[empIndex][day-1];
+                    const shiftClass = `shift-${shift}`;
+                    
+                    tableHTML += `
+                        <td class="${shiftClass}" 
+                            data-employee="${empIndex}" 
+                            data-day="${day}" 
+                            data-shift="${shift}"
+                            title="${employee.name}, ${day} ${monthNames[currentMonth]}: Shift ${shift}">
+                            ${shift}
+                        </td>
+                    `;
+                }
+                
+                tableHTML += `</tr>`;
+            });
+            
+            tableHTML += '</tbody>';
+            scheduleTableEl.innerHTML = tableHTML;
+            
+            // Tambahkan event listener ke setiap sel shift
+            document.querySelectorAll('.schedule-table td[data-employee]').forEach(cell => {
+                cell.addEventListener('click', handleShiftClick);
+            });
+            
+            updateSelectionInfo();
+        }
+        
+        // Handle klik pada shift
+        function handleShiftClick(event) {
+            const cell = event.currentTarget;
+            const employeeId = parseInt(cell.dataset.employee);
+            const day = parseInt(cell.dataset.day);
+            const shift = cell.dataset.shift;
+            
+            // Jika mode tukar shift aktif
+            if (firstSwapShift) {
+                // Jika ini klik kedua (shift tujuan)
+                if (firstSwapShift.employee === employeeId && firstSwapShift.day === day) {
+                    // Klik pada shift yang sama, batalkan pilihan pertama
+                    firstSwapShift = null;
+                    clearSelections();
+                } else {
+                    // Lakukan penukaran shift
+                    swapShifts(firstSwapShift, {employee: employeeId, day: day});
+                    firstSwapShift = null;
+                    clearSelections();
+                }
+            } else {
+                // Mode pilih shift biasa
+                if (selectedShift && selectedShift.employee === employeeId && selectedShift.day === day) {
+                    // Klik pada shift yang sama, batalkan pilihan
+                    selectedShift = null;
+                    clearSelections();
+                } else {
+                    // Pilih shift baru
+                    selectedShift = {employee: employeeId, day: day, shift: shift};
+                    clearSelections();
+                    cell.classList.add('selected');
+                }
+            }
+            
+            updateSelectionInfo();
+        }
+        
+        // Tukar shift antara dua pegawai/hari
+        function swapShifts(shift1, shift2) {
+            // Dapatkan data shift
+            const shift1Data = scheduleData[currentMonth][shift1.employee][shift1.day-1];
+            const shift2Data = scheduleData[currentMonth][shift2.employee][shift2.day-1];
+            
+            // Tukar nilai shift
+            scheduleData[currentMonth][shift1.employee][shift1.day-1] = shift2Data;
+            scheduleData[currentMonth][shift2.employee][shift2.day-1] = shift1Data;
+            
+            // Render ulang jadwal
+            renderSchedule();
+            
+            // Tampilkan notifikasi
+            alert(`Shift berhasil ditukar:\n${employees[shift1.employee].name} (${shift1.day} ${monthNames[currentMonth]}) ↔ ${employees[shift2.employee].name} (${shift2.day} ${monthNames[currentMonth]})`);
+        }
+        
+        // Hapus semua seleksi
+        function clearSelections() {
+            document.querySelectorAll('.selected').forEach(el => {
+                el.classList.remove('selected');
+            });
+        }
+        
+        // Update informasi seleksi
+        function updateSelectionInfo() {
+            const selectionInfoEl = document.getElementById('selection-info');
+            
+            if (firstSwapShift) {
+                const employee = employees[firstSwapShift.employee];
+                selectionInfoEl.innerHTML = `Pilih shift tujuan untuk tukar dengan <strong>${employee.name} (${firstSwapShift.day} ${monthNames[currentMonth]})</strong>`;
+            } else if (selectedShift) {
+                const employee = employees[selectedShift.employee];
+                selectionInfoEl.innerHTML = `Shift terpilih: <strong>${employee.name}</strong>, tanggal <strong>${selectedShift.day} ${monthNames[currentMonth]}</strong>, shift <strong>${selectedShift.shift}</strong>`;
+            } else {
+                selectionInfoEl.innerHTML = "Tidak ada shift terpilih";
+            }
+        }
+        
+        // Tampilkan modal update shift
+        function showUpdateModal() {
+            if (!selectedShift) {
+                alert("Pilih shift terlebih dahulu dengan mengklik pada jadwal!");
+                return;
+            }
+            
+            const employee = employees[selectedShift.employee];
+            const modal = document.getElementById('update-modal');
+            const modalText = document.getElementById('modal-text');
+            
+            modalText.textContent = `Update shift untuk ${employee.name} pada tanggal ${selectedShift.day} ${monthNames[currentMonth]} (saat ini: shift ${selectedShift.shift})`;
+            
+            modal.style.display = 'flex';
+        }
+        
+        // Update shift yang dipilih
+        function updateSelectedShift(newShift) {
+            if (!selectedShift) return;
+            
+            // Update data
+            scheduleData[currentMonth][selectedShift.employee][selectedShift.day-1] = newShift;
+            
+            // Render ulang jadwal
+            renderSchedule();
+            
+            // Reset seleksi
+            selectedShift = null;
+            clearSelections();
+            updateSelectionInfo();
+        }
+        
+        // Inisialisasi aplikasi
+        function initApp() {
+            // Generate jadwal untuk bulan Februari hingga Desember 2026
+            initializeYearSchedule();
+            
+            // Render UI awal
+            renderEmployeeList();
+            renderSchedule();
+            
+            // Event listener untuk navigasi bulan
+            document.getElementById('prev-month').addEventListener('click', () => {
+                // Hanya izinkan navigasi ke bulan Februari (1) hingga Desember (11)
+                if (currentMonth > 1) {
+                    currentMonth--;
+                    selectedShift = null;
+                    firstSwapShift = null;
+                    clearSelections();
+                    renderSchedule();
+                } else {
+                    alert("Tidak bisa navigasi ke Januari 2026. Jadwal hanya tersedia dari Februari hingga Desember 2026.");
+                }
+            });
+            
+            document.getElementById('next-month').addEventListener('click', () => {
+                // Hanya izinkan navigasi ke bulan Februari (1) hingga Desember (11)
+                if (currentMonth < 11) {
+                    currentMonth++;
+                    selectedShift = null;
+                    firstSwapShift = null;
+                    clearSelections();
+                    renderSchedule();
+                } else {
+                    alert("Tidak bisa navigasi ke Januari 2027. Jadwal hanya tersedia untuk tahun 2026.");
+                }
+            });
+            
+            // Event listener untuk tombol update shift
+            document.getElementById('update-shift').addEventListener('click', showUpdateModal);
+            
+            // Event listener untuk tombol tukar shift
+            document.getElementById('swap-shift').addEventListener('click', () => {
+                if (!selectedShift) {
+                    alert("Pilih shift pertama yang ingin ditukar!");
+                    return;
+                }
+                
+                firstSwapShift = {...selectedShift};
+                selectedShift = null;
+                clearSelections();
+                
+                // Highlight shift pertama
+                const firstShiftCell = document.querySelector(`td[data-employee="${firstSwapShift.employee}"][data-day="${firstSwapShift.day}"]`);
+                if (firstShiftCell) {
+                    firstShiftCell.classList.add('selected');
+                }
+                
+                updateSelectionInfo();
+                alert(`Pilih shift kedua untuk ditukar dengan shift ${employees[firstSwapShift.employee].name} tanggal ${firstSwapShift.day}`);
+            });
+            
+            // Event listener untuk tombol reset
+            document.getElementById('reset-selection').addEventListener('click', () => {
+                selectedShift = null;
+                firstSwapShift = null;
+                clearSelections();
+                updateSelectionInfo();
+            });
+            
+            // Event listener untuk generate seluruh tahun
+            document.getElementById('generate-year').addEventListener('click', () => {
+                if (confirm("Generate ulang jadwal untuk Februari hingga Desember 2026? Pola shift awal akan diterapkan.")) {
+                    // Reset data
+                    scheduleData = {};
+                    initializeYearSchedule();
+                    renderSchedule();
+                    alert("Jadwal telah digenerate ulang!");
+                }
+            });
+            
+            // Event listener untuk modal update
+            document.querySelectorAll('.shift-option').forEach(option => {
+                option.addEventListener('click', () => {
+                    // Highlight pilihan
+                    document.querySelectorAll('.shift-option').forEach(opt => {
+                        opt.style.border = '2px solid';
+                        opt.style.opacity = '1';
+                    });
+                    
+                    option.style.border = '3px solid #333';
+                    option.style.opacity = '0.9';
+                    option.dataset.selected = 'true';
+                });
+            });
+            
+            document.getElementById('cancel-update').addEventListener('click', () => {
+                document.getElementById('update-modal').style.display = 'none';
+                document.querySelectorAll('.shift-option').forEach(opt => {
+                    opt.style.border = '2px solid';
+                    opt.style.opacity = '1';
+                    delete opt.dataset.selected;
+                });
+            });
+            
+            document.getElementById('confirm-update').addEventListener('click', () => {
+                const selectedOption = document.querySelector('.shift-option[data-selected="true"]');
+                if (!selectedOption) {
+                    alert("Pilih jenis shift terlebih dahulu!");
+                    return;
+                }
+                
+                const newShift = selectedOption.dataset.shift;
+                updateSelectedShift(newShift);
+                
+                // Tutup modal
+                document.getElementById('update-modal').style.display = 'none';
+                document.querySelectorAll('.shift-option').forEach(opt => {
+                    opt.style.border = '2px solid';
+                    opt.style.opacity = '1';
+                    delete opt.dataset.selected;
+                });
+                
+                alert("Shift berhasil diupdate!");
+            });
+            
+            // Tutup modal jika klik di luar
+            document.getElementById('update-modal').addEventListener('click', (e) => {
+                if (e.target.id === 'update-modal') {
+                    document.getElementById('update-modal').style.display = 'none';
+                    document.querySelectorAll('.shift-option').forEach(opt => {
+                        opt.style.border = '2px solid';
+                        opt.style.opacity = '1';
+                        delete opt.dataset.selected;
+                    });
+                }
+            });
+        }
+        
+        // Jalankan aplikasi saat halaman dimuat
+        document.addEventListener('DOMContentLoaded', initApp);
+    </script>
+</body>
+</html>
