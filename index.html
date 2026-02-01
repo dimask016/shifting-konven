@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jadwal Shift Konven 2026</title>
+    <title>Jadwal Shift Pegawai 2026</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         * {
@@ -91,6 +91,7 @@
             display: flex;
             gap: 15px;
             margin-left: auto;
+            flex-wrap: wrap;
         }
 
         .legend-item {
@@ -125,6 +126,7 @@
             display: flex;
             align-items: center;
             gap: 10px;
+            position: relative;
         }
 
         .employee-item.active {
@@ -136,6 +138,19 @@
             width: 12px;
             height: 12px;
             border-radius: 50%;
+        }
+
+        .employee-workdays {
+            position: absolute;
+            right: 15px;
+            background-color: #2c3e50;
+            color: white;
+            font-size: 0.8rem;
+            font-weight: bold;
+            padding: 2px 8px;
+            border-radius: 10px;
+            min-width: 20px;
+            text-align: center;
         }
 
         .schedule-container {
@@ -192,6 +207,7 @@
         .shift-2 { background-color: #e3f2fd; color: #1565c0; font-weight: bold; }
         .shift-3 { background-color: #fff3e0; color: #ef6c00; font-weight: bold; }
         .shift-x { background-color: #f5f5f5; color: #757575; font-weight: bold; }
+        .shift-C { background-color: #ffebee; color: #c62828; font-weight: bold; }
 
         .selected {
             box-shadow: 0 0 0 3px #ff9800;
@@ -296,6 +312,7 @@
                 flex: 0 0 auto;
                 border-bottom: none;
                 border-right: 1px solid #eaeaea;
+                min-width: 180px;
             }
             
             .schedule-container {
@@ -326,7 +343,7 @@
             padding: 30px;
             border-radius: 10px;
             width: 90%;
-            max-width: 500px;
+            max-width: 600px;
             box-shadow: 0 5px 20px rgba(0,0,0,0.2);
         }
         
@@ -340,19 +357,26 @@
         }
         
         .shift-options {
-            display: flex;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
             gap: 10px;
             margin-bottom: 25px;
         }
         
         .shift-option {
-            flex: 1;
-            padding: 12px;
+            padding: 15px 10px;
             border-radius: 6px;
             cursor: pointer;
             font-weight: bold;
             border: 2px solid;
             transition: all 0.2s;
+            text-align: center;
+            font-size: 1.1rem;
+        }
+        
+        .shift-option:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
         }
         
         .modal-actions {
@@ -377,13 +401,52 @@
             background-color: #2196f3;
             color: white;
         }
+        
+        .statistics-panel {
+            padding: 15px 30px;
+            background-color: #f0f7ff;
+            border-top: 1px solid #d1e7ff;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            font-size: 0.9rem;
+        }
+        
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .stat-value {
+            font-weight: bold;
+            font-size: 1.1rem;
+            color: #2c3e50;
+        }
+        
+        .workday-total {
+            background-color: #2c3e50;
+            color: white;
+            font-weight: bold;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            margin-left: 8px;
+        }
+        
+        .employee-name-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
-            <h1><i class="fas fa-calendar-alt"></i> Jadwal Shift Konven 2026</h1>
-            <p class="subtitle">jadwal shift untuk 5 pegawai. Gunakan fitur update dan tukar shift untuk penyesuaian jadwal.</p>
+            <h1><i class="fas fa-calendar-alt"></i> Jadwal Shift Pegawai 2026</h1>
+            <p class="subtitle">Kelola jadwal shift dengan pola "1 2 3 x x" untuk 5 pegawai. Gunakan fitur update dan tukar shift untuk penyesuaian jadwal.</p>
         </header>
         
         <div class="controls">
@@ -408,7 +471,11 @@
                 </div>
                 <div class="legend-item">
                     <div class="legend-color shift-x"></div>
-                    <span>Hari Libur (x)</span>
+                    <span>Libur (x)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color shift-C"></div>
+                    <span>Cuti (C)</span>
                 </div>
             </div>
         </div>
@@ -423,6 +490,10 @@
                     <!-- Schedule will be generated by JavaScript -->
                 </table>
             </div>
+        </div>
+        
+        <div class="statistics-panel" id="statistics-panel">
+            <!-- Statistics will be generated by JavaScript -->
         </div>
         
         <div class="action-panel">
@@ -443,7 +514,7 @@
             </button>
             
             <div class="shift-info">
-                <div>Pola Shift: <strong>1 2 3 x x</strong></div>
+                <div>Pola Shift: <strong>1 2 3 x x</strong> | Cuti: <strong>C</strong></div>
                 <div class="selection-info" id="selection-info">Tidak ada shift terpilih</div>
             </div>
         </div>
@@ -464,6 +535,7 @@
                 <button class="shift-option" data-shift="2" style="background-color:#e3f2fd; border-color:#1565c0; color:#1565c0;">Shift 2</button>
                 <button class="shift-option" data-shift="3" style="background-color:#fff3e0; border-color:#ef6c00; color:#ef6c00;">Shift 3</button>
                 <button class="shift-option" data-shift="x" style="background-color:#f5f5f5; border-color:#757575; color:#757575;">Libur (x)</button>
+                <button class="shift-option" data-shift="C" style="background-color:#ffebee; border-color:#c62828; color:#c62828;">Cuti (C)</button>
             </div>
             <div class="modal-actions">
                 <button id="cancel-update" class="modal-btn modal-btn-secondary">Batal</button>
@@ -567,19 +639,44 @@
             }
         }
         
-        // Render daftar pegawai
+        // Hitung total hari kerja untuk seorang pegawai dalam bulan tertentu
+        function calculateWorkDays(employeeIndex, month) {
+            const monthSchedule = scheduleData[month];
+            if (!monthSchedule || !monthSchedule[employeeIndex]) return 0;
+            
+            let workDays = 0;
+            const employeeSchedule = monthSchedule[employeeIndex];
+            
+            for (let day = 0; day < employeeSchedule.length; day++) {
+                const shift = employeeSchedule[day];
+                // Shift 1, 2, dan 3 dihitung sebagai hari kerja
+                if (shift === '1' || shift === '2' || shift === '3') {
+                    workDays++;
+                }
+                // Shift 'x' (libur) dan 'C' (cuti) tidak dihitung sebagai hari kerja
+            }
+            
+            return workDays;
+        }
+        
+        // Render daftar pegawai dengan total hari kerja
         function renderEmployeeList() {
             const employeeListEl = document.getElementById('employee-list');
             employeeListEl.innerHTML = '';
             
             employees.forEach(employee => {
+                const workDays = calculateWorkDays(employee.id, currentMonth);
+                
                 const employeeEl = document.createElement('div');
                 employeeEl.className = 'employee-item';
                 employeeEl.dataset.employeeId = employee.id;
                 
                 employeeEl.innerHTML = `
                     <div class="employee-color" style="background-color:${employee.color}"></div>
-                    <span>${employee.name}</span>
+                    <div class="employee-name-container">
+                        <span>${employee.name}</span>
+                        <span class="workday-total" title="Total Hari Kerja">${workDays}</span>
+                    </div>
                 `;
                 
                 employeeEl.addEventListener('click', () => {
@@ -592,6 +689,139 @@
                 
                 employeeListEl.appendChild(employeeEl);
             });
+        }
+        
+        // Hitung statistik untuk bulan saat ini
+        function calculateMonthlyStatistics() {
+            const monthSchedule = scheduleData[currentMonth];
+            if (!monthSchedule) return {};
+            
+            const stats = {
+                totalDays: 0,
+                shift1: 0,
+                shift2: 0,
+                shift3: 0,
+                libur: 0,
+                cuti: 0,
+                workDays: 0,
+                byEmployee: {}
+            };
+            
+            // Inisialisasi statistik per pegawai
+            employees.forEach(employee => {
+                stats.byEmployee[employee.id] = {
+                    name: employee.name,
+                    shift1: 0,
+                    shift2: 0,
+                    shift3: 0,
+                    libur: 0,
+                    cuti: 0,
+                    workDays: 0
+                };
+            });
+            
+            // Hitung statistik
+            const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+            stats.totalDays = daysInMonth;
+            
+            for (let empIndex = 0; empIndex < employees.length; empIndex++) {
+                for (let day = 1; day <= daysInMonth; day++) {
+                    const shift = monthSchedule[empIndex][day-1];
+                    
+                    // Update statistik umum
+                    if (shift === '1') {
+                        stats.shift1++;
+                        stats.workDays++;
+                    }
+                    else if (shift === '2') {
+                        stats.shift2++;
+                        stats.workDays++;
+                    }
+                    else if (shift === '3') {
+                        stats.shift3++;
+                        stats.workDays++;
+                    }
+                    else if (shift === 'x') stats.libur++;
+                    else if (shift === 'C') stats.cuti++;
+                    
+                    // Update statistik per pegawai
+                    if (shift === '1') {
+                        stats.byEmployee[empIndex].shift1++;
+                        stats.byEmployee[empIndex].workDays++;
+                    }
+                    else if (shift === '2') {
+                        stats.byEmployee[empIndex].shift2++;
+                        stats.byEmployee[empIndex].workDays++;
+                    }
+                    else if (shift === '3') {
+                        stats.byEmployee[empIndex].shift3++;
+                        stats.byEmployee[empIndex].workDays++;
+                    }
+                    else if (shift === 'x') stats.byEmployee[empIndex].libur++;
+                    else if (shift === 'C') stats.byEmployee[empIndex].cuti++;
+                }
+            }
+            
+            return stats;
+        }
+        
+        // Render statistik bulanan
+        function renderStatistics() {
+            const statsPanel = document.getElementById('statistics-panel');
+            const stats = calculateMonthlyStatistics();
+            
+            let statsHTML = `
+                <div class="stat-item">
+                    <span>Total Hari:</span>
+                    <span class="stat-value">${stats.totalDays}</span>
+                </div>
+                <div class="stat-item">
+                    <div class="legend-color shift-1" style="width:15px;height:15px;"></div>
+                    <span>Shift 1:</span>
+                    <span class="stat-value">${stats.shift1}</span>
+                </div>
+                <div class="stat-item">
+                    <div class="legend-color shift-2" style="width:15px;height:15px;"></div>
+                    <span>Shift 2:</span>
+                    <span class="stat-value">${stats.shift2}</span>
+                </div>
+                <div class="stat-item">
+                    <div class="legend-color shift-3" style="width:15px;height:15px;"></div>
+                    <span>Shift 3:</span>
+                    <span class="stat-value">${stats.shift3}</span>
+                </div>
+                <div class="stat-item">
+                    <div class="legend-color shift-x" style="width:15px;height:15px;"></div>
+                    <span>Libur:</span>
+                    <span class="stat-value">${stats.libur}</span>
+                </div>
+                <div class="stat-item">
+                    <div class="legend-color shift-C" style="width:15px;height:15px;"></div>
+                    <span>Cuti:</span>
+                    <span class="stat-value">${stats.cuti}</span>
+                </div>
+                <div class="stat-item">
+                    <i class="fas fa-briefcase" style="color:#2c3e50;"></i>
+                    <span>Total Hari Kerja:</span>
+                    <span class="stat-value">${stats.workDays}</span>
+                </div>
+            `;
+            
+            // Tambahkan statistik per pegawai
+            employees.forEach(employee => {
+                const empStats = stats.byEmployee[employee.id];
+                if (empStats) {
+                    statsHTML += `
+                        <div class="stat-item">
+                            <div class="employee-color" style="width:15px;height:15px;background-color:${employee.color}"></div>
+                            <span>${employee.name}:</span>
+                            <span class="stat-value">${empStats.workDays} hari</span>
+                        </div>
+                    `;
+                }
+            });
+            
+            statsPanel.innerHTML = statsHTML;
         }
         
         // Render jadwal untuk bulan saat ini
@@ -613,8 +843,8 @@
             // Buat header tabel
             let tableHTML = '<thead><tr>';
             
-            // Kolom nama pegawai
-            tableHTML += '<th style="width:120px;">Pegawai / Tanggal</th>';
+            // Kolom nama pegawai dengan total hari kerja
+            tableHTML += '<th style="width:150px;">Pegawai (Hari Kerja)</th>';
             
             // Header tanggal dan hari
             for (let day = 1; day <= daysInMonth; day++) {
@@ -633,8 +863,15 @@
             
             // Baris untuk setiap pegawai
             employees.forEach((employee, empIndex) => {
+                const workDays = calculateWorkDays(empIndex, currentMonth);
+                
                 tableHTML += `<tr>`;
-                tableHTML += `<td style="font-weight:bold; text-align:left; padding-left:15px;">${employee.name}</td>`;
+                tableHTML += `<td style="font-weight:bold; text-align:left; padding-left:15px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span>${employee.name}</span>
+                        <span class="workday-total">${workDays}</span>
+                    </div>
+                </td>`;
                 
                 // Data shift untuk setiap hari
                 for (let day = 1; day <= daysInMonth; day++) {
@@ -646,7 +883,7 @@
                             data-employee="${empIndex}" 
                             data-day="${day}" 
                             data-shift="${shift}"
-                            title="${employee.name}, ${day} ${monthNames[currentMonth]}: Shift ${shift}">
+                            title="${employee.name}, ${day} ${monthNames[currentMonth]}: ${getShiftName(shift)}">
                             ${shift}
                         </td>
                     `;
@@ -664,6 +901,20 @@
             });
             
             updateSelectionInfo();
+            renderStatistics();
+            renderEmployeeList();
+        }
+        
+        // Mendapatkan nama shift yang lebih deskriptif
+        function getShiftName(shiftCode) {
+            switch(shiftCode) {
+                case '1': return 'Shift 1';
+                case '2': return 'Shift 2';
+                case '3': return 'Shift 3';
+                case 'x': return 'Hari Libur';
+                case 'C': return 'Cuti';
+                default: return 'Shift ' + shiftCode;
+            }
         }
         
         // Handle klik pada shift
@@ -736,7 +987,7 @@
                 selectionInfoEl.innerHTML = `Pilih shift tujuan untuk tukar dengan <strong>${employee.name} (${firstSwapShift.day} ${monthNames[currentMonth]})</strong>`;
             } else if (selectedShift) {
                 const employee = employees[selectedShift.employee];
-                selectionInfoEl.innerHTML = `Shift terpilih: <strong>${employee.name}</strong>, tanggal <strong>${selectedShift.day} ${monthNames[currentMonth]}</strong>, shift <strong>${selectedShift.shift}</strong>`;
+                selectionInfoEl.innerHTML = `Shift terpilih: <strong>${employee.name}</strong>, tanggal <strong>${selectedShift.day} ${monthNames[currentMonth]}</strong>, shift <strong>${getShiftName(selectedShift.shift)}</strong>`;
             } else {
                 selectionInfoEl.innerHTML = "Tidak ada shift terpilih";
             }
@@ -753,9 +1004,16 @@
             const modal = document.getElementById('update-modal');
             const modalText = document.getElementById('modal-text');
             
-            modalText.textContent = `Update shift untuk ${employee.name} pada tanggal ${selectedShift.day} ${monthNames[currentMonth]} (saat ini: shift ${selectedShift.shift})`;
+            modalText.textContent = `Update shift untuk ${employee.name} pada tanggal ${selectedShift.day} ${monthNames[currentMonth]} (saat ini: ${getShiftName(selectedShift.shift)})`;
             
             modal.style.display = 'flex';
+            
+            // Reset pilihan di modal
+            document.querySelectorAll('.shift-option').forEach(opt => {
+                opt.style.border = '2px solid';
+                opt.style.opacity = '1';
+                delete opt.dataset.selected;
+            });
         }
         
         // Update shift yang dipilih
@@ -780,7 +1038,6 @@
             initializeYearSchedule();
             
             // Render UI awal
-            renderEmployeeList();
             renderSchedule();
             
             // Event listener untuk navigasi bulan
@@ -844,7 +1101,7 @@
             
             // Event listener untuk generate seluruh tahun
             document.getElementById('generate-year').addEventListener('click', () => {
-                if (confirm("Generate ulang jadwal untuk Februari hingga Desember 2026? Pola shift awal akan diterapkan.")) {
+                if (confirm("Generate ulang jadwal untuk Februari hingga Desember 2026? Pola shift awal akan diterapkan dan semua perubahan akan hilang.")) {
                     // Reset data
                     scheduleData = {};
                     initializeYearSchedule();
@@ -915,5 +1172,4 @@
         document.addEventListener('DOMContentLoaded', initApp);
     </script>
 </body>
-
 </html>
