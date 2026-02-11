@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Jadwal Shift Pegawai 2026</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://apis.google.com/js/api.js"></script>
     <style>
         * {
             margin: 0;
@@ -440,13 +441,87 @@
             justify-content: space-between;
             width: 100%;
         }
+
+        /* Loading overlay */
+        #loading {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.5rem;
+            flex-direction: column;
+        }
+
+        #loading i {
+            font-size: 3rem;
+            margin-bottom: 20px;
+        }
+
+        /* Status indicator */
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.8rem;
+            margin-left: 10px;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: #ccc;
+        }
+
+        .status-dot.online {
+            background-color: #4CAF50;
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.offline {
+            background-color: #f44336;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .sync-status {
+            background-color: #e8f5e9;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
     </style>
 </head>
 <body>
+    <!-- Loading Overlay -->
+    <div id="loading">
+        <i class="fas fa-spinner fa-spin"></i>
+        <p>Menyimpan ke Google Sheets...</p>
+    </div>
+
     <div class="container">
         <header>
             <h1><i class="fas fa-calendar-alt"></i> Jadwal Shift Pegawai 2026</h1>
-            <p class="subtitle">Kelola jadwal shift dengan pola "1 2 3 x x" untuk 5 pegawai. Gunakan fitur update dan tukar shift untuk penyesuaian jadwal.</p>
+            <p class="subtitle">Kelola jadwal shift dengan pola "1 2 3 x x" untuk 5 pegawai. Data tersimpan otomatis di Google Sheets.</p>
+            <div class="sync-status" id="sync-status">
+                <i class="fas fa-cloud"></i>
+                <span>Status Sync: </span>
+                <span id="sync-text">Menyiapkan...</span>
+            </div>
         </header>
         
         <div class="controls">
@@ -512,6 +587,14 @@
             <button class="btn btn-secondary" id="generate-year">
                 <i class="fas fa-calendar"></i> Generate Ulang Jadwal
             </button>
+
+            <button class="btn btn-success" id="save-manual">
+                <i class="fas fa-save"></i> Simpan ke Google Sheets
+            </button>
+
+            <button class="btn btn-primary" id="load-manual">
+                <i class="fas fa-download"></i> Load dari Google Sheets
+            </button>
             
             <div class="shift-info">
                 <div>Pola Shift: <strong>1 2 3 x x</strong> | Cuti: <strong>C</strong></div>
@@ -522,6 +605,7 @@
         <div class="footer">
             <p>Tool Jadwal Shift 2026 &copy; Digunakan untuk mengelola jadwal 5 pegawai: Yosafat, Ardhi, Iqbal, Dimas, Windi</p>
             <p>Klik pada shift untuk memilih, lalu gunakan tombol aksi untuk mengupdate atau menukar shift</p>
+            <p><i class="fas fa-info-circle"></i> Data otomatis tersimpan ke Google Sheets</p>
         </div>
     </div>
 
@@ -571,199 +655,242 @@
         let selectedShift = null;
         let firstSwapShift = null;
         
-        // Fungsi untuk menghitung shift berdasarkan pola berulang
-        function calculateShift(employeeIndex, dayOfYear) {
-            // Pola awal untuk setiap pegawai pada 1 Februari 2026 (hari ke-32 dalam tahun)
-            // Berdasarkan data yang diberikan:
-            // Yosafat: x, x, 1, 2, 3, x, x, 1, 2, 3, ...
-            // Ardhi: x, 1, 2, 3, x, x, 1, 2, 3, x, ...
-            // Iqbal: 1, 2, 3, x, x, 1, 2, 3, x, x, ...
-            // Dimas: 2, 3, x, x, 1, 2, 3, x, x, 1, ...
-            // Windi: 3, x, x, 1, 2, 3, x, x, 1, 2, ...
-            
-            // Hitung offset hari dari 1 Februari 2026 (hari ke-32)
-            const feb1DayOfYear = 32; // 1 Februari adalah hari ke-32 dalam tahun 2026
-            const dayOffset = dayOfYear - feb1DayOfYear;
-            
-            // Tentukan pola dasar untuk setiap pegawai
-            const basePatterns = [
-                ["x", "x", "1", "2", "3"], // Yosafat
-                ["x", "1", "2", "3", "x"], // Ardhi
-                ["1", "2", "3", "x", "x"], // Iqbal
-                ["2", "3", "x", "x", "1"], // Dimas
-                ["3", "x", "x", "1", "2"]  // Windi
-            ];
-            
-            const basePattern = basePatterns[employeeIndex];
-            
-            // Hitung shift berdasarkan pola yang berulang setiap 5 hari
-            // Gunakan modulo untuk mendapatkan pola yang berulang
-            const patternIndex = (dayOffset % 5 + 5) % 5; // Untuk menangani nilai negatif
-            return basePattern[patternIndex];
+        // Google Sheets Configuration
+        // GANTI URL INI DENGAN URL WEB APP ANDA SETELAH DEPLOY
+        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbylZlcu2os9MGMDit_7myy6MhV2bzL9yNHLi2CpxCQtYPje76150qrWrbB2-BwEgZXH-g/exec';
+        let isSaving = false;
+        let lastSaveTime = null;
+        
+        // Fungsi untuk menampilkan loading
+        function showLoading(message = "Menyimpan ke Google Sheets...") {
+            const loading = document.getElementById('loading');
+            loading.querySelector('p').textContent = message;
+            loading.style.display = 'flex';
         }
+        
+        function hideLoading() {
+            document.getElementById('loading').style.display = 'none';
+        }
+        
+        // Update status sync
+        function updateSyncStatus(status, message) {
+            const syncText = document.getElementById('sync-text');
+            const syncStatus = document.getElementById('sync-status');
+            
+            syncText.textContent = message;
+            
+            if (status === 'success') {
+                syncStatus.style.backgroundColor = '#e8f5e9';
+                syncStatus.style.color = '#2e7d32';
+                lastSaveTime = new Date();
+            } else if (status === 'error') {
+                syncStatus.style.backgroundColor = '#ffebee';
+                syncStatus.style.color = '#c62828';
+            } else if (status === 'loading') {
+                syncStatus.style.backgroundColor = '#fff3e0';
+                syncStatus.style.color = '#ef6c00';
+            } else if (status === 'offline') {
+                syncStatus.style.backgroundColor = '#f5f5f5';
+                syncStatus.style.color = '#757575';
+            }
+        }
+        
+       // Fungsi untuk menghitung shift berdasarkan pola berulang
+function calculateShift(employeeIndex, dayOfYear) {
+    // Pola awal untuk setiap pegawai pada 1 Februari 2026 (hari ke-32 dalam tahun)
+    const feb1DayOfYear = 32; // 1 Februari adalah hari ke-32 dalam tahun 2026
+    const dayOffset = dayOfYear - feb1DayOfYear;
+    
+    // Tentukan pola dasar untuk setiap pegawai
+    const basePatterns = [
+        ["x", "x", "1", "2", "3"], // Yosafat
+        ["x", "1", "2", "3", "x"], // Ardhi
+        ["1", "2", "3", "x", "x"], // Iqbal
+        ["2", "3", "x", "x", "1"], // Dimas
+        ["3", "x", "x", "1", "2"]  // Windi
+    ];
+    
+    const basePattern = basePatterns[employeeIndex];
+    
+    // Hitung shift berdasarkan pola yang berulang setiap 5 hari
+    const patternIndex = (dayOffset % 5 + 5) % 5;
+    
+    // Debug jika diperlukan
+    if (dayOfYear === feb1DayOfYear) {
+        console.log(`Day 1 Feb: employee ${employees[employeeIndex].name}, pattern: ${basePattern}, index: ${patternIndex}, shift: ${basePattern[patternIndex]}`);
+    }
+    
+    return basePattern[patternIndex];
+}
         
         // Inisialisasi jadwal untuk Februari hingga Desember 2026
         function initializeYearSchedule() {
-            // Hanya generate untuk bulan Februari (1) hingga Desember (11)
-            for (let month = 1; month <= 11; month++) {
-                generateMonthSchedule(month, 2026);
-            }
-        }
+    for (let month = 1; month <= 11; month++) { // Februari (1) hingga Desember (11)
+        generateMonthSchedule(month, 2026);
+    }
+}
         
         // Generate jadwal untuk satu bulan
-        function generateMonthSchedule(month, year) {
-            const daysInMonth = new Date(year, month + 1, 0).getDate();
+       // Generate jadwal untuk satu bulan
+function generateMonthSchedule(month, year) {
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    
+    if (!scheduleData[month]) {
+        scheduleData[month] = {};
+    }
+    
+    console.log(`Generating schedule for ${monthNames[month]} ${year}, days: ${daysInMonth}`);
+    
+    for (let empIndex = 0; empIndex < employees.length; empIndex++) {
+        const employeeSchedule = [];
+        
+        for (let day = 1; day <= daysInMonth; day++) {
+            const date = new Date(year, month, day);
+            const startOfYear = new Date(year, 0, 1);
+            const dayOfYear = Math.floor((date - startOfYear) / (1000 * 60 * 60 * 24)) + 1;
             
-            // Inisialisasi data bulan
-            if (!scheduleData[month]) {
-                scheduleData[month] = {};
-            }
-            
-            // Generate jadwal untuk setiap pegawai
-            for (let empIndex = 0; empIndex < employees.length; empIndex++) {
-                const employeeSchedule = [];
-                
-                // Untuk setiap hari dalam bulan
-                for (let day = 1; day <= daysInMonth; day++) {
-                    // Hitung hari dalam tahun
-                    const date = new Date(year, month, day);
-                    const startOfYear = new Date(year, 0, 1);
-                    const dayOfYear = Math.floor((date - startOfYear) / (1000 * 60 * 60 * 24)) + 1;
-                    
-                    // Hitung shift untuk hari ini
-                    const shift = calculateShift(empIndex, dayOfYear);
-                    employeeSchedule.push(shift);
-                }
-                
-                scheduleData[month][empIndex] = employeeSchedule;
-            }
+            const shift = calculateShift(empIndex, dayOfYear);
+            employeeSchedule.push(shift);
         }
         
+        scheduleData[month][empIndex] = employeeSchedule;
+        
+        // Debug: tampilkan beberapa data pertama
+        console.log(`${employees[empIndex].name}: ${employeeSchedule.slice(0, 5).join(', ')}...`);
+    }
+    
+    console.log(`Schedule generated for ${monthNames[month]}`);
+}
         // Hitung total hari kerja untuk seorang pegawai dalam bulan tertentu
-        function calculateWorkDays(employeeIndex, month) {
-            const monthSchedule = scheduleData[month];
-            if (!monthSchedule || !monthSchedule[employeeIndex]) return 0;
-            
-            let workDays = 0;
-            const employeeSchedule = monthSchedule[employeeIndex];
-            
-            for (let day = 0; day < employeeSchedule.length; day++) {
-                const shift = employeeSchedule[day];
-                // Shift 1, 2, dan 3 dihitung sebagai hari kerja
-                if (shift === '1' || shift === '2' || shift === '3') {
-                    workDays++;
-                }
-                // Shift 'x' (libur) dan 'C' (cuti) tidak dihitung sebagai hari kerja
-            }
-            
-            return workDays;
+// Hitung total hari kerja untuk seorang pegawai dalam bulan tertentu
+function calculateWorkDays(employeeIndex, month) {
+    const monthSchedule = scheduleData[month];
+    if (!monthSchedule || !monthSchedule[employeeIndex]) return 0;
+    
+    let workDays = 0;
+    const employeeSchedule = monthSchedule[employeeIndex];
+    
+    for (let day = 0; day < employeeSchedule.length; day++) {
+        const shift = employeeSchedule[day];
+        // SESUAIKAN DENGAN LOGIKA STATISTIK: Shift 1,2,3, dan C adalah hari kerja
+        if (shift === '1' || shift === '2' || shift === '3' || shift === 'C') {
+            workDays++;
         }
+    }
+    
+    return workDays;
+}
         
         // Render daftar pegawai dengan total hari kerja
-        function renderEmployeeList() {
-            const employeeListEl = document.getElementById('employee-list');
-            employeeListEl.innerHTML = '';
-            
-            employees.forEach(employee => {
-                const workDays = calculateWorkDays(employee.id, currentMonth);
-                
-                const employeeEl = document.createElement('div');
-                employeeEl.className = 'employee-item';
-                employeeEl.dataset.employeeId = employee.id;
-                
-                employeeEl.innerHTML = `
-                    <div class="employee-color" style="background-color:${employee.color}"></div>
-                    <div class="employee-name-container">
-                        <span>${employee.name}</span>
-                        <span class="workday-total" title="Total Hari Kerja">${workDays}</span>
-                    </div>
-                `;
-                
-                employeeEl.addEventListener('click', () => {
-                    // Tampilkan jadwal pegawai yang dipilih
-                    document.querySelectorAll('.employee-item').forEach(item => {
-                        item.classList.remove('active');
-                    });
-                    employeeEl.classList.add('active');
-                });
-                
-                employeeListEl.appendChild(employeeEl);
-            });
-        }
+        // Render daftar pegawai dengan total hari kerja
+function renderEmployeeList() {
+    const employeeListEl = document.getElementById('employee-list');
+    employeeListEl.innerHTML = '';
+    
+    employees.forEach(employee => {
+        // GUNAKAN FUNGSI calculateWorkDays yang sudah diperbaiki
+        const workDays = calculateWorkDays(employee.id, currentMonth);
         
-        // Hitung statistik untuk bulan saat ini
-        function calculateMonthlyStatistics() {
-            const monthSchedule = scheduleData[currentMonth];
-            if (!monthSchedule) return {};
-            
-            const stats = {
-                totalDays: 0,
-                shift1: 0,
-                shift2: 0,
-                shift3: 0,
-                libur: 0,
-                cuti: 0,
-                workDays: 0,
-                byEmployee: {}
-            };
-            
-            // Inisialisasi statistik per pegawai
-            employees.forEach(employee => {
-                stats.byEmployee[employee.id] = {
-                    name: employee.name,
-                    shift1: 0,
-                    shift2: 0,
-                    shift3: 0,
-                    libur: 0,
-                    cuti: 0,
-                    workDays: 0
-                };
+        const employeeEl = document.createElement('div');
+        employeeEl.className = 'employee-item';
+        employeeEl.dataset.employeeId = employee.id;
+        
+        employeeEl.innerHTML = `
+            <div class="employee-color" style="background-color:${employee.color}"></div>
+            <div class="employee-name-container">
+                <span>${employee.name}</span>
+                <span class="employee-workdays">${workDays}</span>
+            </div>
+        `;
+        
+        employeeEl.addEventListener('click', () => {
+            document.querySelectorAll('.employee-item').forEach(item => {
+                item.classList.remove('active');
             });
+            employeeEl.classList.add('active');
+        });
+        
+        employeeListEl.appendChild(employeeEl);
+    });
+}
+        // Hitung statistik untuk bulan saat ini
+// Hitung statistik untuk bulan saat ini
+function calculateMonthlyStatistics() {
+    const monthSchedule = scheduleData[currentMonth];
+    if (!monthSchedule) return {};
+    
+    const stats = {
+        totalDays: 0,
+        shift1: 0,
+        shift2: 0,
+        shift3: 0,
+        libur: 0,
+        cuti: 0,
+        workDays: 0, // Hari kerja termasuk cuti
+        byEmployee: {}
+    };
+    
+    employees.forEach(employee => {
+        stats.byEmployee[employee.id] = {
+            name: employee.name,
+            shift1: 0,
+            shift2: 0,
+            shift3: 0,
+            libur: 0,
+            cuti: 0,
+            workDays: 0 // Hari kerja termasuk cuti
+        };
+    });
+    
+    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+    stats.totalDays = daysInMonth;
+    
+    for (let empIndex = 0; empIndex < employees.length; empIndex++) {
+        for (let day = 1; day <= daysInMonth; day++) {
+            const shift = monthSchedule[empIndex][day-1] || 'x';
             
-            // Hitung statistik
-            const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-            stats.totalDays = daysInMonth;
-            
-            for (let empIndex = 0; empIndex < employees.length; empIndex++) {
-                for (let day = 1; day <= daysInMonth; day++) {
-                    const shift = monthSchedule[empIndex][day-1];
-                    
-                    // Update statistik umum
-                    if (shift === '1') {
-                        stats.shift1++;
-                        stats.workDays++;
-                    }
-                    else if (shift === '2') {
-                        stats.shift2++;
-                        stats.workDays++;
-                    }
-                    else if (shift === '3') {
-                        stats.shift3++;
-                        stats.workDays++;
-                    }
-                    else if (shift === 'x') stats.libur++;
-                    else if (shift === 'C') stats.cuti++;
-                    
-                    // Update statistik per pegawai
-                    if (shift === '1') {
-                        stats.byEmployee[empIndex].shift1++;
-                        stats.byEmployee[empIndex].workDays++;
-                    }
-                    else if (shift === '2') {
-                        stats.byEmployee[empIndex].shift2++;
-                        stats.byEmployee[empIndex].workDays++;
-                    }
-                    else if (shift === '3') {
-                        stats.byEmployee[empIndex].shift3++;
-                        stats.byEmployee[empIndex].workDays++;
-                    }
-                    else if (shift === 'x') stats.byEmployee[empIndex].libur++;
-                    else if (shift === 'C') stats.byEmployee[empIndex].cuti++;
-                }
+            // Hitung untuk total bulanan
+            if (shift === '1') {
+                stats.shift1++;
+                stats.workDays++; // Shift 1 = hari kerja
             }
+            else if (shift === '2') {
+                stats.shift2++;
+                stats.workDays++; // Shift 2 = hari kerja
+            }
+            else if (shift === '3') {
+                stats.shift3++;
+                stats.workDays++; // Shift 3 = hari kerja
+            }
+            else if (shift === 'C') {
+                stats.cuti++;
+                stats.workDays++; // Cuti = hari kerja
+            }
+            else if (shift === 'x') stats.libur++;
             
-            return stats;
+            // Hitung per pegawai
+            if (shift === '1') {
+                stats.byEmployee[empIndex].shift1++;
+                stats.byEmployee[empIndex].workDays++;
+            }
+            else if (shift === '2') {
+                stats.byEmployee[empIndex].shift2++;
+                stats.byEmployee[empIndex].workDays++;
+            }
+            else if (shift === '3') {
+                stats.byEmployee[empIndex].shift3++;
+                stats.byEmployee[empIndex].workDays++;
+            }
+            else if (shift === 'C') {
+                stats.byEmployee[empIndex].cuti++;
+                stats.byEmployee[empIndex].workDays++; // Cuti = hari kerja
+            }
+            else if (shift === 'x') stats.byEmployee[empIndex].libur++;
         }
+    }
+    
+    return stats;
+}
         
         // Render statistik bulanan
         function renderStatistics() {
@@ -807,7 +934,6 @@
                 </div>
             `;
             
-            // Tambahkan statistik per pegawai
             employees.forEach(employee => {
                 const empStats = stats.byEmployee[employee.id];
                 if (empStats) {
@@ -825,85 +951,89 @@
         }
         
         // Render jadwal untuk bulan saat ini
-        function renderSchedule() {
-            const scheduleTableEl = document.getElementById('schedule-table');
-            const monthYearEl = document.getElementById('month-year');
-            
-            // Update judul bulan
-            monthYearEl.textContent = `${monthNames[currentMonth]} ${currentYear}`;
-            
-            // Ambil data untuk bulan ini
-            const monthSchedule = scheduleData[currentMonth];
-            if (!monthSchedule) {
-                generateMonthSchedule(currentMonth, currentYear);
+        // Render jadwal untuk bulan saat ini
+function renderSchedule() {
+    const scheduleTableEl = document.getElementById('schedule-table');
+    const monthYearEl = document.getElementById('month-year');
+    
+    monthYearEl.textContent = `${monthNames[currentMonth]} ${currentYear}`;
+    
+    // Pastikan data ada
+    if (!scheduleData[currentMonth]) {
+        generateMonthSchedule(currentMonth, currentYear);
+    }
+    
+    const monthSchedule = scheduleData[currentMonth];
+    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+    
+    let tableHTML = '<thead><tr>';
+    tableHTML += '<th style="width:150px;">Pegawai (Hari Kerja)</th>';
+    
+    for (let day = 1; day <= daysInMonth; day++) {
+        const date = new Date(currentYear, currentMonth, day);
+        const dayName = date.toLocaleDateString('id-ID', { weekday: 'short' });
+        
+        tableHTML += `
+            <th class="day-header">
+                <div class="day-number">${day}</div>
+                <div class="day-name">${dayName}</div>
+            </th>
+        `;
+    }
+    
+    tableHTML += '</tr></thead><tbody>';
+    
+    employees.forEach((employee, empIndex) => {
+        // HITUNG HARI KERJA DENGAN FUNGSI YANG BENAR
+        const workDays = calculateWorkDays(empIndex, currentMonth);
+        
+        tableHTML += `<tr>`;
+        tableHTML += `<td style="font-weight:bold; text-align:left; padding-left:15px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; padding-right:15px;">
+                <span>${employee.name}</span>
+                <span class="workday-total">${workDays}</span>
+            </div>
+        </td>`;
+        
+        for (let day = 1; day <= daysInMonth; day++) {
+            let shift = 'x';
+            if (monthSchedule && monthSchedule[empIndex] && monthSchedule[empIndex][day-1] !== undefined) {
+                shift = monthSchedule[empIndex][day-1];
             }
             
-            const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-            
-            // Buat header tabel
-            let tableHTML = '<thead><tr>';
-            
-            // Kolom nama pegawai dengan total hari kerja
-            tableHTML += '<th style="width:150px;">Pegawai (Hari Kerja)</th>';
-            
-            // Header tanggal dan hari
-            for (let day = 1; day <= daysInMonth; day++) {
-                const date = new Date(currentYear, currentMonth, day);
-                const dayName = date.toLocaleDateString('id-ID', { weekday: 'short' });
-                
-                tableHTML += `
-                    <th class="day-header">
-                        <div class="day-number">${day}</div>
-                        <div class="day-name">${dayName}</div>
-                    </th>
-                `;
+            // Pastikan shift valid
+            if (shift === 'undefined' || shift === undefined || shift === null) {
+                shift = 'x';
             }
             
-            tableHTML += '</tr></thead><tbody>';
+            const shiftClass = `shift-${shift}`;
             
-            // Baris untuk setiap pegawai
-            employees.forEach((employee, empIndex) => {
-                const workDays = calculateWorkDays(empIndex, currentMonth);
-                
-                tableHTML += `<tr>`;
-                tableHTML += `<td style="font-weight:bold; text-align:left; padding-left:15px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <span>${employee.name}</span>
-                        <span class="workday-total">${workDays}</span>
-                    </div>
-                </td>`;
-                
-                // Data shift untuk setiap hari
-                for (let day = 1; day <= daysInMonth; day++) {
-                    const shift = monthSchedule[empIndex][day-1];
-                    const shiftClass = `shift-${shift}`;
-                    
-                    tableHTML += `
-                        <td class="${shiftClass}" 
-                            data-employee="${empIndex}" 
-                            data-day="${day}" 
-                            data-shift="${shift}"
-                            title="${employee.name}, ${day} ${monthNames[currentMonth]}: ${getShiftName(shift)}">
-                            ${shift}
-                        </td>
-                    `;
-                }
-                
-                tableHTML += `</tr>`;
-            });
-            
-            tableHTML += '</tbody>';
-            scheduleTableEl.innerHTML = tableHTML;
-            
-            // Tambahkan event listener ke setiap sel shift
-            document.querySelectorAll('.schedule-table td[data-employee]').forEach(cell => {
-                cell.addEventListener('click', handleShiftClick);
-            });
-            
-            updateSelectionInfo();
-            renderStatistics();
-            renderEmployeeList();
+            tableHTML += `
+                <td class="${shiftClass}" 
+                    data-employee="${empIndex}" 
+                    data-day="${day}" 
+                    data-shift="${shift}"
+                    title="${employee.name}, ${day} ${monthNames[currentMonth]}: ${getShiftName(shift)}">
+                    ${shift}
+                </td>
+            `;
         }
+        
+        tableHTML += `</tr>`;
+    });
+    
+    tableHTML += '</tbody>';
+    scheduleTableEl.innerHTML = tableHTML;
+    
+    // Event listeners
+    document.querySelectorAll('.schedule-table td[data-employee]').forEach(cell => {
+        cell.addEventListener('click', handleShiftClick);
+    });
+    
+    updateSelectionInfo();
+    renderStatistics();
+    renderEmployeeList(); // Pastikan ini dipanggil
+}
         
         // Mendapatkan nama shift yang lebih deskriptif
         function getShiftName(shiftCode) {
@@ -924,27 +1054,20 @@
             const day = parseInt(cell.dataset.day);
             const shift = cell.dataset.shift;
             
-            // Jika mode tukar shift aktif
             if (firstSwapShift) {
-                // Jika ini klik kedua (shift tujuan)
                 if (firstSwapShift.employee === employeeId && firstSwapShift.day === day) {
-                    // Klik pada shift yang sama, batalkan pilihan pertama
                     firstSwapShift = null;
                     clearSelections();
                 } else {
-                    // Lakukan penukaran shift
                     swapShifts(firstSwapShift, {employee: employeeId, day: day});
                     firstSwapShift = null;
                     clearSelections();
                 }
             } else {
-                // Mode pilih shift biasa
                 if (selectedShift && selectedShift.employee === employeeId && selectedShift.day === day) {
-                    // Klik pada shift yang sama, batalkan pilihan
                     selectedShift = null;
                     clearSelections();
                 } else {
-                    // Pilih shift baru
                     selectedShift = {employee: employeeId, day: day, shift: shift};
                     clearSelections();
                     cell.classList.add('selected');
@@ -956,18 +1079,15 @@
         
         // Tukar shift antara dua pegawai/hari
         function swapShifts(shift1, shift2) {
-            // Dapatkan data shift
             const shift1Data = scheduleData[currentMonth][shift1.employee][shift1.day-1];
             const shift2Data = scheduleData[currentMonth][shift2.employee][shift2.day-1];
             
-            // Tukar nilai shift
             scheduleData[currentMonth][shift1.employee][shift1.day-1] = shift2Data;
             scheduleData[currentMonth][shift2.employee][shift2.day-1] = shift1Data;
             
-            // Render ulang jadwal
             renderSchedule();
+            saveToGoogleSheets();
             
-            // Tampilkan notifikasi
             alert(`Shift berhasil ditukar:\n${employees[shift1.employee].name} (${shift1.day} ${monthNames[currentMonth]}) ↔ ${employees[shift2.employee].name} (${shift2.day} ${monthNames[currentMonth]})`);
         }
         
@@ -1008,7 +1128,6 @@
             
             modal.style.display = 'flex';
             
-            // Reset pilihan di modal
             document.querySelectorAll('.shift-option').forEach(opt => {
                 opt.style.border = '2px solid';
                 opt.style.opacity = '1';
@@ -1020,47 +1139,375 @@
         function updateSelectedShift(newShift) {
             if (!selectedShift) return;
             
-            // Update data
             scheduleData[currentMonth][selectedShift.employee][selectedShift.day-1] = newShift;
             
-            // Render ulang jadwal
             renderSchedule();
+            saveToGoogleSheets();
             
-            // Reset seleksi
             selectedShift = null;
             clearSelections();
             updateSelectionInfo();
         }
         
+        // ===========================
+        // GOOGLE SHEETS FUNCTIONS
+        // ===========================
+        
+        // Fungsi untuk menyimpan data shift ke Google Sheets
+        // Fungsi untuk menyimpan data shift ke Google Sheets (DIPERBAIKI)
+async function saveToGoogleSheets() {
+    if (isSaving) return;
+    
+    isSaving = true;
+    showLoading("Menyimpan ke Google Sheets...");
+    updateSyncStatus('loading', 'Menyimpan...');
+    
+    try {
+        const monthSchedule = scheduleData[currentMonth];
+        if (!monthSchedule) return;
+        
+        const saveData = {
+            action: 'save',
+            month: currentMonth,
+            year: currentYear,
+            data: monthSchedule
+        };
+        
+        console.log('Mengirim data ke Google Sheets:', saveData);
+        
+        // Gunakan metode yang berbeda untuk menghindari CORS
+        const formData = new FormData();
+        formData.append('data', JSON.stringify(saveData));
+        
+        // Buat URL dengan parameter
+        const url = `${GOOGLE_SCRIPT_URL}?action=save&month=${currentMonth}&year=${currentYear}&data=${encodeURIComponent(JSON.stringify(monthSchedule))}`;
+        
+        // Coba metode pertama: fetch dengan mode 'no-cors'
+        const response = await fetch(url, {
+            method: 'GET',
+            mode: 'no-cors', // Mode no-cors
+            cache: 'no-cache'
+        });
+        
+        console.log('Request terkirim ke:', url);
+        
+        // Simpan ke localStorage sebagai backup
+        saveToLocalStorage();
+        
+        // Coba metode kedua: menggunakan iframe untuk bypass CORS
+        setTimeout(() => {
+            const iframe = document.createElement('iframe');
+            iframe.style.display = 'none';
+            iframe.src = url;
+            document.body.appendChild(iframe);
+            
+            setTimeout(() => {
+                document.body.removeChild(iframe);
+            }, 3000);
+        }, 100);
+        
+        // Update status
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString('id-ID', { 
+            hour: '2-digit', 
+            minute: '2-digit',
+            second: '2-digit'
+        });
+        updateSyncStatus('success', `Tersimpan ${timeStr}`);
+        
+        alert('Data berhasil dikirim ke Google Sheets!');
+        
+        // Refresh data dari Google Sheets setelah 2 detik
+       // setTimeout(async () => {
+       //     await loadFromGoogleSheets(true); // Force reload
+      //  }, 2000);
+        
+    } catch (error) {
+        console.error('Error saving to Google Sheets:', error);
+        
+        // Backup ke localStorage
+        saveToLocalStorage();
+        
+        updateSyncStatus('error', 'Gagal, disimpan lokal');
+        alert('Gagal menyimpan ke Google Sheets. Data disimpan lokal.\n\nCoba gunakan tombol "Export CSV" untuk backup manual.');
+    } finally {
+        isSaving = false;
+        hideLoading();
+        
+        // Reset status setelah 5 detik
+        setTimeout(() => {
+            if (lastSaveTime) {
+                const timeStr = lastSaveTime.toLocaleTimeString('id-ID', { 
+                    hour: '2-digit', 
+                    minute: '2-digit'
+                });
+                updateSyncStatus('success', `Disimpan ${timeStr}`);
+            }
+        }, 5000);
+    }
+}
+        
+        // Fungsi untuk memuat data dari Google Sheets
+        // Fungsi untuk memuat data dari Google Sheets (DIPERBAIKI)
+async function loadFromGoogleSheets(force = false) {
+    if (!force && isSaving) return false;
+    
+    showLoading("Memuat dari Google Sheets...");
+    updateSyncStatus('loading', 'Memuat...');
+    
+    try {
+        const timestamp = new Date().getTime();
+        const url = `${GOOGLE_SCRIPT_URL}?action=load&month=${currentMonth}&year=${currentYear}&_=${timestamp}`;
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        
+        const text = await response.text();
+        let result;
+        try {
+            result = JSON.parse(text);
+        } catch (e) {
+            throw new Error('Respon bukan JSON valid');
+        }
+
+        // ----- VALIDASI STRUKTUR DASAR -----
+        if (!result.success) throw new Error(result.message || 'Server gagal');
+        if (!result.data || typeof result.data !== 'object') throw new Error('Properti data tidak ditemukan');
+
+        // Pastikan semua employee (0..4) tersedia dan berupa array
+        for (let i = 0; i < employees.length; i++) {
+            if (!Array.isArray(result.data[i])) {
+                throw new Error(`Data employee ${i} bukan array`);
+            }
+        }
+
+        // ----- BACKUP DATA LAMA -----
+        const previousData = scheduleData[currentMonth] ? 
+            JSON.parse(JSON.stringify(scheduleData[currentMonth])) : null;
+
+        // ----- TIMPA DULU, NANTI DIVALIDASI LAGI -----
+        scheduleData[currentMonth] = result.data;
+
+        // ----- SANITASI: paksa semua shift ke format valid -----
+        sanitizeMonthData(currentMonth);
+
+        // ----- VALIDASI KONTEN: pastikan tidak semua 'x' -----
+        const monthSchedule = scheduleData[currentMonth];
+        let totalShifts = 0;
+        let validShiftsCount = 0;
+        for (let i = 0; i < employees.length; i++) {
+            for (let shift of monthSchedule[i]) {
+                totalShifts++;
+                if (shift !== 'x') validShiftsCount++;
+            }
+        }
+
+        // Jika lebih dari 95% adalah 'x', curiga data rusak
+        if (validShiftsCount / totalShifts < 0.05) {
+            // Kembalikan data sebelumnya (jika ada)
+            if (previousData) {
+                scheduleData[currentMonth] = previousData;
+                throw new Error('Data dari cloud hampir semua libur (x). Data lokal dipertahankan.');
+            } else {
+                // Tidak ada backup, generate ulang
+                generateMonthSchedule(currentMonth, currentYear);
+                throw new Error('Data cloud rusak, generate ulang jadwal.');
+            }
+        }
+
+        // ----- DATA LOLOS, SIMPAN KE LOCALSTORAGE -----
+        saveToLocalStorage();
+        console.log('✅ Data berhasil dimuat dari Google Sheets');
+        updateSyncStatus('success', 'Data terbaru dimuat');
+        renderSchedule();
+        return true;
+        
+    } catch (error) {
+        console.error('❌ Error loading from Google Sheets:', error);
+        updateSyncStatus('offline', `Gagal: ${error.message}`);
+        alert(`Gagal memuat dari Google Sheets.\n\n${error.message}\n\nData lokal tetap digunakan.`);
+        
+        // Pastikan scheduleData tidak dalam keadaan rusak
+        if (!scheduleData[currentMonth]) {
+            generateMonthSchedule(currentMonth, currentYear);
+            renderSchedule();
+        }
+    } finally {
+        hideLoading();
+    }
+    return false;
+}
+
+//SANITASI
+function sanitizeMonthData(month) {
+    const monthSchedule = scheduleData[month];
+    if (!monthSchedule) return;
+    
+    const daysInMonth = new Date(currentYear, month + 1, 0).getDate();
+    const validShifts = ['1','2','3','x','C'];
+    
+    for (let empIndex = 0; empIndex < employees.length; empIndex++) {
+        if (!Array.isArray(monthSchedule[empIndex])) {
+            monthSchedule[empIndex] = Array(daysInMonth).fill('x');
+            continue;
+        }
+        // Perbaiki panjang array
+        if (monthSchedule[empIndex].length !== daysInMonth) {
+            const newArray = Array(daysInMonth).fill('x');
+            for (let d = 0; d < Math.min(monthSchedule[empIndex].length, daysInMonth); d++) {
+                const shift = monthSchedule[empIndex][d];
+                newArray[d] = validShifts.includes(String(shift)) ? String(shift) : 'x';
+            }
+            monthSchedule[empIndex] = newArray;
+        } else {
+            for (let d = 0; d < daysInMonth; d++) {
+                const shift = monthSchedule[empIndex][d];
+                monthSchedule[empIndex][d] = validShifts.includes(String(shift)) ? String(shift) : 'x';
+            }
+        }
+    }
+}
+        
+        // Fungsi untuk load data (prioritas: Google Sheets -> localStorage -> generate baru)
+       // Fungsi untuk load data (prioritas: Google Sheets -> localStorage -> generate baru)
+async function loadScheduleData() {
+    console.log('Memuat data untuk bulan', currentMonth, monthNames[currentMonth]);
+    
+    // Cek apakah data sudah ada di memori
+    if (scheduleData[currentMonth]) {
+        console.log('Data sudah ada di memori');
+        return true;
+    }
+    
+    // Cek localStorage dulu untuk kecepatan
+    const fromLocal = loadFromLocalStorage();
+    if (fromLocal) {
+        console.log('Data dimuat dari localStorage');
+        return true;
+    }
+    
+    // Coba load dari Google Sheets
+    console.log('Mencoba load dari Google Sheets...');
+    const fromSheets = await loadFromGoogleSheets();
+    if (fromSheets) {
+        console.log('Data dimuat dari Google Sheets');
+        return true;
+    }
+    
+    // Jika semua gagal, generate data baru
+    console.log('Generating new schedule data...');
+    generateMonthSchedule(currentMonth, currentYear);
+    
+    return true;
+}
+        
+        // Fungsi backup ke localStorage
+        function saveToLocalStorage() {
+            try {
+                const monthSchedule = scheduleData[currentMonth];
+                if (monthSchedule) {
+                    const key = `schedule_${currentMonth}_${currentYear}`;
+                    localStorage.setItem(key, JSON.stringify(monthSchedule));
+                    console.log('Data disimpan ke localStorage:', key);
+                    
+                    // Simpan timestamp
+                    localStorage.setItem(`lastSave_${currentMonth}_${currentYear}`, new Date().toISOString());
+                    return true;
+                }
+            } catch (error) {
+                console.error('Error saving to localStorage:', error);
+            }
+            return false;
+        }
+        
+        function loadFromLocalStorage() {
+            try {
+                const key = `schedule_${currentMonth}_${currentYear}`;
+                const saved = localStorage.getItem(key);
+                if (saved) {
+                    scheduleData[currentMonth] = JSON.parse(saved);
+                    console.log('Data dimuat dari localStorage:', key);
+                    
+                    // Update last save time display
+                    const lastSave = localStorage.getItem(`lastSave_${currentMonth}_${currentYear}`);
+                    if (lastSave) {
+                        const lastSaveDate = new Date(lastSave);
+                        const timeStr = lastSaveDate.toLocaleTimeString('id-ID', { 
+                            hour: '2-digit', 
+                            minute: '2-digit'
+                        });
+                        updateSyncStatus('success', `Data lokal ${timeStr}`);
+                    }
+                    
+                    return true;
+                } else {
+                    console.log('Tidak ada data di localStorage untuk', key);
+                    updateSyncStatus('offline', 'Data baru');
+                }
+            } catch (error) {
+                console.error('Error loading from localStorage:', error);
+                updateSyncStatus('error', 'Error memuat lokal');
+            }
+            return false;
+        }
+        
+        // Fungsi untuk export data sebagai CSV
+        function exportToCSV() {
+            const monthSchedule = scheduleData[currentMonth];
+            if (!monthSchedule) return;
+            
+            let csv = "Pegawai,Tanggal,Shift\n";
+            
+            for (let empIndex = 0; empIndex < employees.length; empIndex++) {
+                for (let day = 1; day <= monthSchedule[empIndex].length; day++) {
+                    const shift = monthSchedule[empIndex][day-1];
+                    csv += `${employees[empIndex].name},${day} ${monthNames[currentMonth]} ${currentYear},${getShiftName(shift)}\n`;
+                }
+            }
+            
+            // Buat file download
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.setAttribute("href", url);
+            link.setAttribute("download", `jadwal_shift_${monthNames[currentMonth]}_${currentYear}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+        
         // Inisialisasi aplikasi
-        function initApp() {
-            // Generate jadwal untuk bulan Februari hingga Desember 2026
+        async function initApp() {
+            // Generate jadwal default untuk semua bulan
             initializeYearSchedule();
+            
+            // Load data untuk bulan saat ini
+            await loadScheduleData();
             
             // Render UI awal
             renderSchedule();
             
             // Event listener untuk navigasi bulan
-            document.getElementById('prev-month').addEventListener('click', () => {
-                // Hanya izinkan navigasi ke bulan Februari (1) hingga Desember (11)
+            document.getElementById('prev-month').addEventListener('click', async () => {
                 if (currentMonth > 1) {
                     currentMonth--;
                     selectedShift = null;
                     firstSwapShift = null;
                     clearSelections();
+                    await loadScheduleData();
                     renderSchedule();
                 } else {
                     alert("Tidak bisa navigasi ke Januari 2026. Jadwal hanya tersedia dari Februari hingga Desember 2026.");
                 }
             });
             
-            document.getElementById('next-month').addEventListener('click', () => {
-                // Hanya izinkan navigasi ke bulan Februari (1) hingga Desember (11)
+            document.getElementById('next-month').addEventListener('click', async () => {
                 if (currentMonth < 11) {
                     currentMonth++;
                     selectedShift = null;
                     firstSwapShift = null;
                     clearSelections();
+                    await loadScheduleData();
                     renderSchedule();
                 } else {
                     alert("Tidak bisa navigasi ke Januari 2027. Jadwal hanya tersedia untuk tahun 2026.");
@@ -1081,7 +1528,6 @@
                 selectedShift = null;
                 clearSelections();
                 
-                // Highlight shift pertama
                 const firstShiftCell = document.querySelector(`td[data-employee="${firstSwapShift.employee}"][data-day="${firstSwapShift.day}"]`);
                 if (firstShiftCell) {
                     firstShiftCell.classList.add('selected');
@@ -1102,18 +1548,31 @@
             // Event listener untuk generate seluruh tahun
             document.getElementById('generate-year').addEventListener('click', () => {
                 if (confirm("Generate ulang jadwal untuk Februari hingga Desember 2026? Pola shift awal akan diterapkan dan semua perubahan akan hilang.")) {
-                    // Reset data
                     scheduleData = {};
                     initializeYearSchedule();
                     renderSchedule();
-                    alert("Jadwal telah digenerate ulang!");
+                    saveToGoogleSheets();
+                    alert("Jadwal telah digenerate ulang dan disimpan!");
+                }
+            });
+            
+            // Event listener untuk save manual
+            document.getElementById('save-manual').addEventListener('click', saveToGoogleSheets);
+            
+            // Event listener untuk load manual
+            document.getElementById('load-manual').addEventListener('click', async () => {
+                if (confirm("Load data dari Google Sheets? Data lokal akan digantikan dengan data dari cloud.")) {
+                    const loaded = await loadFromGoogleSheets();
+                    if (loaded) {
+                        renderSchedule();
+                        alert("Data berhasil dimuat dari Google Sheets!");
+                    }
                 }
             });
             
             // Event listener untuk modal update
             document.querySelectorAll('.shift-option').forEach(option => {
                 option.addEventListener('click', () => {
-                    // Highlight pilihan
                     document.querySelectorAll('.shift-option').forEach(opt => {
                         opt.style.border = '2px solid';
                         opt.style.opacity = '1';
@@ -1144,7 +1603,6 @@
                 const newShift = selectedOption.dataset.shift;
                 updateSelectedShift(newShift);
                 
-                // Tutup modal
                 document.getElementById('update-modal').style.display = 'none';
                 document.querySelectorAll('.shift-option').forEach(opt => {
                     opt.style.border = '2px solid';
@@ -1166,6 +1624,21 @@
                     });
                 }
             });
+            
+            // Tambahkan tombol export CSV
+            const exportBtn = document.createElement('button');
+            exportBtn.className = 'btn btn-secondary';
+            exportBtn.innerHTML = '<i class="fas fa-file-export"></i> Export CSV';
+            exportBtn.addEventListener('click', exportToCSV);
+            document.querySelector('.action-panel').insertBefore(exportBtn, document.querySelector('.shift-info'));
+            
+            // Auto-save ketika berpindah bulan
+            window.addEventListener('beforeunload', function() {
+                saveToLocalStorage();
+            });
+            
+            // Update status awal
+            updateSyncStatus('success', 'Siap digunakan');
         }
         
         // Jalankan aplikasi saat halaman dimuat
