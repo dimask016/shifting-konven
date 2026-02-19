@@ -639,6 +639,15 @@
             { id: 4, name: "Windi", color: "#F44336" }
         ];
 
+        // MODIFIKASI: Fungsi untuk mendapatkan nama pegawai berdasarkan bulan (Dimas -> Tomi mulai Maret 2026)
+        function getEmployeeName(empId) {
+            // currentMonth tersedia secara global
+            if (empId === 3 && currentMonth >= 2) { // Maret (index 2) ke atas
+                return "Tomi";
+            }
+            return employees[empId].name;
+        }
+
         const monthNames = [
             "Januari", "Februari", "Maret", "April", "Mei", "Juni",
             "Juli", "Agustus", "September", "Oktober", "November", "Desember"
@@ -707,7 +716,7 @@
                 ["x", "x", "1", "2", "3"], // Yosafat
                 ["x", "1", "2", "3", "x"], // Ardhi
                 ["1", "2", "3", "x", "x"], // Iqbal
-                ["2", "3", "x", "x", "1"], // Dimas
+                ["2", "3", "x", "x", "1"], // Dimas (pola tetap sama untuk Tomi)
                 ["3", "x", "x", "1", "2"]  // Windi
             ];
             
@@ -789,10 +798,11 @@
                 employeeEl.className = 'employee-item';
                 employeeEl.dataset.employeeId = employee.id;
                 
+                // MODIFIKASI: Gunakan getEmployeeName untuk menampilkan nama
                 employeeEl.innerHTML = `
                     <div class="employee-color" style="background-color:${employee.color}"></div>
                     <div class="employee-name-container">
-                        <span>${employee.name}</span>
+                        <span>${getEmployeeName(employee.id)}</span>
                         <span class="employee-workdays">${workDays}</span>
                     </div>
                 `;
@@ -931,10 +941,11 @@
             employees.forEach(employee => {
                 const empStats = stats.byEmployee[employee.id];
                 if (empStats) {
+                    // MODIFIKASI: Gunakan getEmployeeName untuk menampilkan nama di statistik
                     statsHTML += `
                         <div class="stat-item">
                             <div class="employee-color" style="width:15px;height:15px;background-color:${employee.color}"></div>
-                            <span>${employee.name}:</span>
+                            <span>${getEmployeeName(employee.id)}:</span>
                             <span class="stat-value">${empStats.workDays} hari</span>
                         </div>
                     `;
@@ -981,9 +992,10 @@
                 const workDays = calculateWorkDays(empIndex, currentMonth);
                 
                 tableHTML += `<tr>`;
+                // MODIFIKASI: Gunakan getEmployeeName untuk menampilkan nama di kolom pertama
                 tableHTML += `<td style="font-weight:bold; text-align:left; padding-left:15px;">
                     <div style="display:flex; justify-content:space-between; align-items:center; padding-right:15px;">
-                        <span>${employee.name}</span>
+                        <span>${getEmployeeName(empIndex)}</span>
                         <span class="workday-total">${workDays}</span>
                     </div>
                 </td>`;
@@ -1001,12 +1013,13 @@
                     
                     const shiftClass = `shift-${shift}`;
                     
+                    // MODIFIKASI: Gunakan getEmployeeName untuk tooltip
                     tableHTML += `
                         <td class="${shiftClass}" 
                             data-employee="${empIndex}" 
                             data-day="${day}" 
                             data-shift="${shift}"
-                            title="${employee.name}, ${day} ${monthNames[currentMonth]}: ${getShiftName(shift)}">
+                            title="${getEmployeeName(empIndex)}, ${day} ${monthNames[currentMonth]}: ${getShiftName(shift)}">
                             ${shift}
                         </td>
                     `;
@@ -1081,7 +1094,8 @@
             renderSchedule();
             saveToGoogleSheets();
             
-            alert(`Shift berhasil ditukar:\n${employees[shift1.employee].name} (${shift1.day} ${monthNames[currentMonth]}) ↔ ${employees[shift2.employee].name} (${shift2.day} ${monthNames[currentMonth]})`);
+            // MODIFIKASI: Gunakan getEmployeeName untuk alert
+            alert(`Shift berhasil ditukar:\n${getEmployeeName(shift1.employee)} (${shift1.day} ${monthNames[currentMonth]}) ↔ ${getEmployeeName(shift2.employee)} (${shift2.day} ${monthNames[currentMonth]})`);
         }
         
         // Hapus semua seleksi
@@ -1096,11 +1110,11 @@
             const selectionInfoEl = document.getElementById('selection-info');
             
             if (firstSwapShift) {
-                const employee = employees[firstSwapShift.employee];
-                selectionInfoEl.innerHTML = `Pilih shift tujuan untuk tukar dengan <strong>${employee.name} (${firstSwapShift.day} ${monthNames[currentMonth]})</strong>`;
+                // MODIFIKASI: Gunakan getEmployeeName
+                selectionInfoEl.innerHTML = `Pilih shift tujuan untuk tukar dengan <strong>${getEmployeeName(firstSwapShift.employee)} (${firstSwapShift.day} ${monthNames[currentMonth]})</strong>`;
             } else if (selectedShift) {
-                const employee = employees[selectedShift.employee];
-                selectionInfoEl.innerHTML = `Shift terpilih: <strong>${employee.name}</strong>, tanggal <strong>${selectedShift.day} ${monthNames[currentMonth]}</strong>, shift <strong>${getShiftName(selectedShift.shift)}</strong>`;
+                // MODIFIKASI: Gunakan getEmployeeName
+                selectionInfoEl.innerHTML = `Shift terpilih: <strong>${getEmployeeName(selectedShift.employee)}</strong>, tanggal <strong>${selectedShift.day} ${monthNames[currentMonth]}</strong>, shift <strong>${getShiftName(selectedShift.shift)}</strong>`;
             } else {
                 selectionInfoEl.innerHTML = "Tidak ada shift terpilih";
             }
@@ -1113,11 +1127,11 @@
                 return;
             }
             
-            const employee = employees[selectedShift.employee];
+            // MODIFIKASI: Gunakan getEmployeeName
             const modal = document.getElementById('update-modal');
             const modalText = document.getElementById('modal-text');
             
-            modalText.textContent = `Update shift untuk ${employee.name} pada tanggal ${selectedShift.day} ${monthNames[currentMonth]} (saat ini: ${getShiftName(selectedShift.shift)})`;
+            modalText.textContent = `Update shift untuk ${getEmployeeName(selectedShift.employee)} pada tanggal ${selectedShift.day} ${monthNames[currentMonth]} (saat ini: ${getShiftName(selectedShift.shift)})`;
             
             modal.style.display = 'flex';
             
@@ -1456,7 +1470,8 @@
 
             // Baris per pegawai: nama, lalu shift untuk setiap tanggal
             for (let empIndex = 0; empIndex < employees.length; empIndex++) {
-                const employeeName = employees[empIndex].name;
+                // MODIFIKASI: Gunakan getEmployeeName untuk ekspor CSV
+                const employeeName = getEmployeeName(empIndex);
                 csv += employeeName;
                 
                 for (let day = 1; day <= daysInMonth; day++) {
@@ -1538,7 +1553,7 @@
                 }
                 
                 updateSelectionInfo();
-                alert(`Pilih shift kedua untuk ditukar dengan shift ${employees[firstSwapShift.employee].name} tanggal ${firstSwapShift.day}`);
+                alert(`Pilih shift kedua untuk ditukar dengan shift ${getEmployeeName(firstSwapShift.employee)} tanggal ${firstSwapShift.day}`);
             });
             
             // Event listener untuk tombol reset
