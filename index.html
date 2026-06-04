@@ -604,7 +604,7 @@
         </div>
         
         <div class="footer">
-            <p>Tool Jadwal Shift 2026 &copy; Digunakan untuk mengelola jadwal 5 pegawai: Yosafat, Ardhi, Iqbal, Dimas, Windi</p>
+            <p>Tool Jadwal Shift 2026 &copy; Digunakan untuk mengelola jadwal 5 pegawai: Yosafat, Ardhi, Iqbal, Tomi, Windi</p>
             <p>Klik pada shift untuk memilih, lalu gunakan tombol aksi untuk mengupdate atau menukar shift</p>
             <p><i class="fas fa-info-circle"></i> Data otomatis tersimpan ke Google Sheets</p>
         </div>
@@ -635,11 +635,11 @@
             { id: 0, name: "Yosafat", color: "#4CAF50" },
             { id: 1, name: "Ardhi", color: "#2196F3" },
             { id: 2, name: "Iqbal", color: "#FF9800" },
-            { id: 3, name: "Dimas", color: "#9C27B0" },
+            { id: 3, name: "Tomi", color: "#9C27B0" },
             { id: 4, name: "Windi", color: "#F44336" }
         ];
 
-        // MODIFIKASI: Fungsi untuk mendapatkan nama pegawai berdasarkan bulan (Dimas -> Tomi mulai Maret 2026)
+        // MODIFIKASI: Fungsi untuk mendapatkan nama pegawai berdasarkan bulan (Tomi -> Tomi mulai Maret 2026)
         function getEmployeeName(empId) {
             // currentMonth tersedia secara global
             if (empId === 3 && currentMonth >= 2) { // Maret (index 2) ke atas
@@ -716,7 +716,7 @@
                 ["x", "x", "1", "2", "3"], // Yosafat
                 ["x", "1", "2", "3", "x"], // Ardhi
                 ["1", "2", "3", "x", "x"], // Iqbal
-                ["2", "3", "x", "x", "1"], // Dimas (pola tetap sama untuk Tomi)
+                ["2", "3", "x", "x", "1"], // Tomi (pola tetap sama untuk Tomi)
                 ["3", "x", "x", "1", "2"]  // Windi
             ];
             
